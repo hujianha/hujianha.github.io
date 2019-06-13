@@ -4,16 +4,16 @@
 
 # Site
 title: 一叶扁舟
-subtitle: 我们的目标是，星辰大海。
+subtitle: Lost time is never found again
 description: 撑桨人
 keywords: android java
-author: aaahj
+author: hujian222
 language: zh-Hans
 timezone:
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
-url: https://aaahj.github.io/
+url: https://hujian222.github.io/
 root: /
 permalink: :year/:month/:day/:title/
 permalink_defaults:
@@ -79,7 +79,7 @@ theme: next
 ## Docs: https://hexo.io/docs/deployment.html
 deploy:
   type: git
-  repo: git@github.com:aaahj/aaahj.github.io.git
+  repo: git@github.com:hujian222/hujian222.github.io.git
   branch: master
 
 
