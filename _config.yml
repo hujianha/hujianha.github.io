@@ -7,13 +7,13 @@ title: 个人博客
 subtitle: Lost time is never found again
 description: andorid 小学生
 keywords: android java
-author: hujian222
+author: hujianha
 language: zh-CN
 timezone:
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
-url: https://hujian222.github.io/
+url: https://hujianha.github.io/
 root: /
 permalink: :year/:month/:day/:title/
 permalink_defaults:
