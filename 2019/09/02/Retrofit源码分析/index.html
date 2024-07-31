@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha256-XOqroi11tY4EFQMR9ZYwZWKj5ZXiftSx36RRuC3anlA=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"hujianha.github.io","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.20.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="本文基于Retrofit2.5分析结合Rxjava2.x  本文将分析retrofi的工作原理，集合Rxjava2.x深入理解。 基本使用com.squareup.retrofit2:retrofit:2.5.0   com.squareup.retrofit2:converter-gson:2.5.0   com.squareup.retrofit2:adapter-rxjava2:2.5.0">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Retrofit源码分析">
+<meta property="og:url" content="https://hujianha.github.io/2019/09/02/Retrofit%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="个人博客">
+<meta property="og:description" content="本文基于Retrofit2.5分析结合Rxjava2.x  本文将分析retrofi的工作原理，集合Rxjava2.x深入理解。 基本使用com.squareup.retrofit2:retrofit:2.5.0   com.squareup.retrofit2:converter-gson:2.5.0   com.squareup.retrofit2:adapter-rxjava2:2.5.0">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ws1.sinaimg.cn/large/e825fefdgy1g6uhit7dnzj20ak0emt98.jpg">
+<meta property="article:published_time" content="2019-09-02T08:03:28.000Z">
+<meta property="article:modified_time" content="2024-07-30T09:46:14.253Z">
+<meta property="article:author" content="hujianha">
+<meta property="article:tag" content="源码分析">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ws1.sinaimg.cn/large/e825fefdgy1g6uhit7dnzj20ak0emt98.jpg">
+
+
+<link rel="canonical" href="https://hujianha.github.io/2019/09/02/Retrofit%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://hujianha.github.io/2019/09/02/Retrofit%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/","path":"2019/09/02/Retrofit源码分析/","title":"Retrofit源码分析"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Retrofit源码分析 | 个人博客</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">个人博客</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">Lost time is never found again</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8"><span class="nav-number">1.</span> <span class="nav-text">基本使用</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#retrofit-create"><span class="nav-number">2.</span> <span class="nav-text">retrofit.create</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#ServiceMethod%E7%9A%84%E8%81%8C%E8%B4%A3"><span class="nav-number">3.</span> <span class="nav-text">ServiceMethod的职责</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#HttpServiceMethod%E7%9A%84%E4%BD%9C%E7%94%A8"><span class="nav-number">4.</span> <span class="nav-text">HttpServiceMethod的作用</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">hujianha</p>
+  <div class="site-description" itemprop="description">andorid 小学生</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">4</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://hujianha.github.io/2019/09/02/Retrofit%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="hujianha">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人博客">
+      <meta itemprop="description" content="andorid 小学生">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Retrofit源码分析 | 个人博客">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Retrofit源码分析
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-09-02 16:03:28" itemprop="dateCreated datePublished" datetime="2019-09-02T16:03:28+08:00">2019-09-02</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-07-30 17:46:14" itemprop="dateModified" datetime="2024-07-30T17:46:14+08:00">2024-07-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%AD%A6%E4%B9%A0/" itemprop="url" rel="index"><span itemprop="name">学习</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>本文基于Retrofit2.5分析<br>结合Rxjava2.x</p>
+</blockquote>
+<p>本文将分析retrofi的工作原理，集合Rxjava2.x深入理解。</p>
+<h1 id="基本使用"><a href="#基本使用" class="headerlink" title="基本使用"></a>基本使用</h1><pre><code>com.squareup.retrofit2:retrofit:2.5.0  
+com.squareup.retrofit2:converter-gson:2.5.0  
+com.squareup.retrofit2:adapter-rxjava2:2.5.0
+
+public interface ApiInterface &#123;
+    @FormUrlEncoded
+    @POST(&quot;app/banner&quot;)
+    Observable&lt;HttpResult&lt;List&lt;BannerEntity&gt;&gt;&gt; getBanner(@Field(&quot;id&quot;) String a);
+&#125;
+
+//初始化retrofit
+Retrofit retrofit = new Retrofit.Builder()
+            .client(okHttpClient)
+            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create())
+            .baseUrl(&quot;www&quot;)
+            .build();
+
+//生成ApiInterface
+ApiInterface apiInterface = retrofit.create(ApiInterface.class);
+
+//发起请求，获取接口数据
+Observable&lt;HttpResult&lt;List&lt;BannerEntity&gt;&gt;&gt; banner = apiInterface.getBanner(&quot;aaa&quot;);
+banner~~~
+</code></pre>
+<h1 id="retrofit-create"><a href="#retrofit-create" class="headerlink" title="retrofit.create"></a>retrofit.create</h1><p>看看<code>retrofit.create</code>里发生了什么，返回的对象怎么就可以获取网络数据了呢</p>
+<pre><code>public &lt;T&gt; T create(final Class&lt;T&gt; service) &#123;
+    Utils.validateServiceInterface(service);
+    if (validateEagerly) &#123;
+      eagerlyValidateMethods(service);
+    &#125;
+    return (T) Proxy.newProxyInstance(service.getClassLoader(), new Class&lt;?&gt;[]&#123; service &#125;,
+        new InvocationHandler() &#123;
+          private final Platform platform = Platform.get();
+          private final Object[] emptyArgs = new Object[0];
+
+          @Override public Object invoke(Object proxy, Method method, @Nullable Object[] args)
+              throws Throwable &#123;
+            // If the method is a method from Object then defer to normal invocation.
+            if (method.getDeclaringClass() == Object.class) &#123;
+              return method.invoke(this, args);
+            &#125;
+            if (platform.isDefaultMethod(method)) &#123;
+              return platform.invokeDefaultMethod(method, service, proxy, args);
+            &#125;
+            //关键代码,生成ServiceMethod并调用invoke
+            return loadServiceMethod(method).invoke(args != null ? args : emptyArgs);
+          &#125;
+        &#125;);
+&#125;
+</code></pre>
+<p>这里使用了动态代理，对于代理我的理解为被代理的对象<code>service</code>调用的每个方法都会回调此处的逻辑实现。关键代码在<code>loadServiceMethod(method).invoke(args != null ? args : emptyArgs)</code>。</p>
+<pre><code> ServiceMethod&lt;?&gt; loadServiceMethod(Method method) &#123;
+    //获取缓存中的对象，加速加载
+    ServiceMethod&lt;?&gt; result = serviceMethodCache.get(method);
+    if (result != null) return result;
+
+    synchronized (serviceMethodCache) &#123;
+      result = serviceMethodCache.get(method);
+      if (result == null) &#123;
+        //没有缓存，则新建
+        result = ServiceMethod.parseAnnotations(this, method);
+        //加入缓存
+        serviceMethodCache.put(method, result);
+      &#125;
+    &#125;
+    return result;
+  &#125;
+</code></pre>
+<h1 id="ServiceMethod的职责"><a href="#ServiceMethod的职责" class="headerlink" title="ServiceMethod的职责"></a>ServiceMethod的职责</h1><p>再看如何新建<code>ServiceMethod</code>的。</p>
+<pre><code>abstract class ServiceMethod&lt;T&gt; &#123;
+  static &lt;T&gt; ServiceMethod&lt;T&gt; parseAnnotations(Retrofit retrofit, Method method) &#123;
+    RequestFactory requestFactory = RequestFactory.parseAnnotations(retrofit, method);
+
+    Type returnType = method.getGenericReturnType();
+    if (Utils.hasUnresolvableType(returnType)) &#123;
+      throw methodError(method,
+          &quot;Method return type must not include a type variable or wildcard: %s&quot;, returnType);
+    &#125;
+    if (returnType == void.class) &#123;
+      throw methodError(method, &quot;Service methods cannot return void.&quot;);
+    &#125;
+
+    return HttpServiceMethod.parseAnnotations(retrofit, method, requestFactory);
+  &#125;
+
+  abstract T invoke(Object[] args);
+&#125;
+</code></pre>
+<p>实际中使用的下方的<code>HttpServiceMethod</code></p>
+<h1 id="HttpServiceMethod的作用"><a href="#HttpServiceMethod的作用" class="headerlink" title="HttpServiceMethod的作用"></a>HttpServiceMethod的作用</h1><p><code>HttpServiceMethod</code>主要承担了分析对应的<code>method</code>的所有参数的功能，例如注解（@GET），传入的参数，另外还负责获取 <code>callAdapter</code>,<code>responseConverter</code>等<code>Retrofit</code>配置，可以说它承载了后续 Http 请求所需的一切参数。</p>
+<pre><code>static &lt;ResponseT, ReturnT&gt; HttpServiceMethod&lt;ResponseT, ReturnT&gt; parseAnnotations(
+      Retrofit retrofit, Method method, RequestFactory requestFactory) &#123;
+    CallAdapter&lt;ResponseT, ReturnT&gt; callAdapter = createCallAdapter(retrofit, method);
+    Type responseType = callAdapter.responseType();
+    if (responseType == Response.class || responseType == okhttp3.Response.class) &#123;
+      throw methodError(method, &quot;&#39;&quot;
+          + Utils.getRawType(responseType).getName()
+          + &quot;&#39; is not a valid response body type. Did you mean ResponseBody?&quot;);
+    &#125;
+    if (requestFactory.httpMethod.equals(&quot;HEAD&quot;) &amp;&amp; !Void.class.equals(responseType)) &#123;
+      throw methodError(method, &quot;HEAD method must use Void as response type.&quot;);
+    &#125;
+
+    Converter&lt;ResponseBody, ResponseT&gt; responseConverter =
+        createResponseConverter(retrofit, method, responseType);
+    //这里的callFactory即为初始化retrofit时传入的RxJava2CallAdapterFactory.create()生成
+    okhttp3.Call.Factory callFactory = retrofit.callFactory;
+    return new HttpServiceMethod&lt;&gt;(requestFactory, callFactory, callAdapter, responseConverter);
+  &#125;
+
+//被调用的invoke方法
+@Override 
+ReturnT invoke(Object[] args) &#123;
+    return callAdapter.adapt(
+        new OkHttpCall&lt;&gt;(requestFactory, args, callFactory, responseConverter));
+&#125;
+</code></pre>
+<p>#OkHttpCall<br>接着看<code>new OkHttpCall&lt;&gt;(requestFactory, args, callFactory, responseConverter))</code>,为<code>HttpServiceMethod</code>和参数生成了一个<code>OkHttpCall</code>,从名字来看它是对 <code>OkHttp3.Call</code> 的组合包装,事实上，它也确实是。(<code>OkHttpCall</code>中有一个成员<code>okhttp3.Call rawCall</code>)。</p>
+<p>#callAdapter.adapt<br><code>return loadServiceMethod(method).invoke(args != null ? args : emptyArgs);</code>最终调用为</p>
+<p><code>return callAdapter.adapt(new OkHttpCall&lt;&gt;(requestFactory, args, callFactory, responseConverter));</code></p>
+<p>到这里就要真正开始行动了。</p>
+<p>这里涉及到的<code>callAdapter</code>是有我们初始化Retrofit时传入的<code>RxJava2CallAdapterFactory.create()</code>生成，实例为<code>RxJavaCallAdapterFactory</code>。</p>
+<p>所以这里<code>callAdapter</code>为<code>RxJava2CallAdapter.get()</code>返回的<code>RxJava2CallAdapter</code>。</p>
+<p>再来分析<code>RxJava2CallAdapter</code>的<code>adapt()</code></p>
+<pre><code>@Override 
+public Object adapt(Call&lt;R&gt; call) &#123;
+    //判断生成何种Observable
+    Observable&lt;Response&lt;R&gt;&gt; responseObservable = isAsync
+        ? new CallEnqueueObservable&lt;&gt;(call)
+        : new CallExecuteObservable&lt;&gt;(call);
+
+    Observable&lt;?&gt; observable;
+    if (isResult) &#123;
+      observable = new ResultObservable&lt;&gt;(responseObservable);
+    &#125; else if (isBody) &#123;
+      observable = new BodyObservable&lt;&gt;(responseObservable);
+    &#125; else &#123;
+      observable = responseObservable;
+    &#125;
+
+    if (scheduler != null) &#123;
+      observable = observable.subscribeOn(scheduler);
+    &#125;
+
+    if (isFlowable) &#123;
+      return observable.toFlowable(BackpressureStrategy.LATEST);
+    &#125;
+    if (isSingle) &#123;
+      return observable.singleOrError();
+    &#125;
+    if (isMaybe) &#123;
+      return observable.singleElement();
+    &#125;
+    if (isCompletable) &#123;
+      return observable.ignoreElements();
+    &#125;
+    return RxJavaPlugins.onAssembly(observable);
+  &#125;
+</code></pre>
+<p>看到在这里通过<code>new CallEnqueueObservable&lt;&gt;(call)</code>生成对象并返回。<br>来看<code>CallEnqueueObservable</code>:</p>
+<pre><code>private final Call&lt;T&gt; originalCall;
+
+CallEnqueueObservable(Call&lt;T&gt; originalCall) &#123;
+    this.originalCall = originalCall;
+&#125;
+//复写Observable的方法，在订阅时触发该方法
+@Override 
+protected void subscribeActual(Observer&lt;? super Response&lt;T&gt;&gt; observer) &#123;
+    // Since Call is a one-shot type, clone it for each new observer.
+    //clone传入的OkhttpCall
+    Call&lt;T&gt; call = originalCall.clone();
+    //构建CallCallback
+    CallCallback&lt;T&gt; callback = new CallCallback&lt;&gt;(call, observer);
+    observer.onSubscribe(callback);
+    if (!callback.isDisposed()) &#123;
+      //这里是OkhttpCall，也是okhttp实际开始工作的开始
+      call.enqueue(callback);
+    &#125;
+&#125;
+</code></pre>
+<p>这里的<code>OkHttpCall</code>是在<code>HttpServiceMethod</code>中生成的<code>OkhttpCall</code>。</p>
+<p><code>call.enqueue</code>开始了数据的获取。</p>
+<pre><code>@Override 
+public void enqueue(final Callback&lt;T&gt; callback) &#123;
+    checkNotNull(callback, &quot;callback == null&quot;);
+
+    okhttp3.Call call;
+    Throwable failure;
+
+    synchronized (this) &#123;
+      if (executed) throw new IllegalStateException(&quot;Already executed.&quot;);
+      executed = true;
+
+      call = rawCall;
+      failure = creationFailure;
+      if (call == null &amp;&amp; failure == null) &#123;
+        try &#123;
+          call = rawCall = createRawCall();
+        &#125; catch (Throwable t) &#123;
+          throwIfFatal(t);
+          failure = creationFailure = t;
+        &#125;
+      &#125;
+    &#125;
+
+    if (failure != null) &#123;
+      callback.onFailure(this, failure);
+      return;
+    &#125;
+
+    if (canceled) &#123;
+      call.cancel();
+    &#125;
+    
+    //okhttp的调用出现咯
+    call.enqueue(new okhttp3.Callback() &#123;
+      @Override public void onResponse(okhttp3.Call call, okhttp3.Response rawResponse) &#123;
+        Response&lt;T&gt; response;
+        try &#123;
+          response = parseResponse(rawResponse);
+        &#125; catch (Throwable e) &#123;
+          throwIfFatal(e);
+          callFailure(e);
+          return;
+        &#125;
+
+        try &#123;
+          //将数据返回给CallEnqueueObservable
+          callback.onResponse(OkHttpCall.this, response);
+        &#125; catch (Throwable t) &#123;
+          t.printStackTrace();
+        &#125;
+      &#125;
+
+      @Override public void onFailure(okhttp3.Call call, IOException e) &#123;
+        callFailure(e);
+      &#125;
+
+      private void callFailure(Throwable e) &#123;
+        try &#123;
+          
+          callback.onFailure(OkHttpCall.this, e);
+        &#125; catch (Throwable t) &#123;
+          t.printStackTrace();
+        &#125;
+      &#125;
+    &#125;);
+&#125;
+</code></pre>
+<p>看到这里<code>okhttp</code>开始获取数据并将结果通过入参的<code>CallCallback</code>回调到<code>CallEnqueueObservable</code>中，<code>CallCallback</code>是<code>CallEnqueueObservable</code>内部类，看看它的<code>onResponse()</code>方法：</p>
+<pre><code>@Override 
+public void onResponse(Call&lt;T&gt; call, Response&lt;T&gt; response) &#123;
+  if (disposed) return;
+
+  try &#123;
+    observer.onNext(response);
+
+    if (!disposed) &#123;
+      terminated = true;
+      observer.onComplete();
+    &#125;
+  &#125; catch (Throwable t) &#123;
+    if (terminated) &#123;
+      RxJavaPlugins.onError(t);
+    &#125; else if (!disposed) &#123;
+      try &#123;
+        observer.onError(t);
+      &#125; catch (Throwable inner) &#123;
+        Exceptions.throwIfFatal(inner);
+        RxJavaPlugins.onError(new CompositeException(t, inner));
+      &#125;
+    &#125;
+  &#125;
+&#125;
+</code></pre>
+<p>可以看到是将okhttp得到的结果返回给了<code>Observable</code>的观察者。</p>
+<p>到这里也算是缕清了为啥<code>Retrofit</code>和<code>RxJava</code>的合作关系及其原理。</p>
+<p>总结一下调用流程</p>
+<p><img src="https://ws1.sinaimg.cn/large/e825fefdgy1g6uhit7dnzj20ak0emt98.jpg" alt="retrofit与rxjava原理流程图.jpg"></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="tag"># 源码分析</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2019/07/09/okhttp%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="prev" title="okhttp源码分析">
+                  <i class="fa fa-angle-left"></i> okhttp源码分析
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">hujianha</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

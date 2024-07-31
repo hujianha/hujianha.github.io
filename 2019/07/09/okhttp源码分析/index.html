@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha256-XOqroi11tY4EFQMR9ZYwZWKj5ZXiftSx36RRuC3anlA=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"hujianha.github.io","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.20.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="看一遍okhttp的源码，做个记录推荐一篇自己看的博文： OKHttp源码解析,还在他哪里引用了几张图~欢迎交流~   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： &#x2F;&#x2F;HTTP GET public String get(String url) throws IOException &#123;     &#x2F;&#x2F;新建OKHttpClient客户端     OkHttpCl">
+<meta property="og:type" content="article">
+<meta property="og:title" content="okhttp源码分析">
+<meta property="og:url" content="https://hujianha.github.io/2019/07/09/okhttp%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="个人博客">
+<meta property="og:description" content="看一遍okhttp的源码，做个记录推荐一篇自己看的博文： OKHttp源码解析,还在他哪里引用了几张图~欢迎交流~   普通的GET请求这是用okhttp写的一个同步请求,相信大家都很熟悉： &#x2F;&#x2F;HTTP GET public String get(String url) throws IOException &#123;     &#x2F;&#x2F;新建OKHttpClient客户端     OkHttpCl">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://ww1.sinaimg.cn/large/e825fefdgy1g4tpbfnun8j20j10vh0uk.jpg">
+<meta property="article:published_time" content="2019-07-09T03:43:36.000Z">
+<meta property="article:modified_time" content="2024-07-30T09:46:14.253Z">
+<meta property="article:author" content="hujianha">
+<meta property="article:tag" content="源码分析">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://ww1.sinaimg.cn/large/e825fefdgy1g4tpbfnun8j20j10vh0uk.jpg">
+
+
+<link rel="canonical" href="https://hujianha.github.io/2019/07/09/okhttp%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://hujianha.github.io/2019/07/09/okhttp%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/","path":"2019/07/09/okhttp源码分析/","title":"okhttp源码分析"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>okhttp源码分析 | 个人博客</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">个人博客</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">Lost time is never found again</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%99%AE%E9%80%9A%E7%9A%84GET%E8%AF%B7%E6%B1%82"><span class="nav-number">1.</span> <span class="nav-text">普通的GET请求</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">hujianha</p>
+  <div class="site-description" itemprop="description">andorid 小学生</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">4</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://hujianha.github.io/2019/07/09/okhttp%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="hujianha">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人博客">
+      <meta itemprop="description" content="andorid 小学生">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="okhttp源码分析 | 个人博客">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          okhttp源码分析
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-07-09 11:43:36" itemprop="dateCreated datePublished" datetime="2019-07-09T11:43:36+08:00">2019-07-09</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-07-30 17:46:14" itemprop="dateModified" datetime="2024-07-30T17:46:14+08:00">2024-07-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%AD%A6%E4%B9%A0/" itemprop="url" rel="index"><span itemprop="name">学习</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>看一遍okhttp的源码，做个记录<br>推荐一篇自己看的博文： <a href="https://www.jianshu.com/p/27c1554b7fee">OKHttp源码解析</a>,还在他哪里引用了几张图~<br>欢迎交流~</p>
+</blockquote>
+<p><img src="http://ww1.sinaimg.cn/large/e825fefdgy1g4tpbfnun8j20j10vh0uk.jpg" alt="流程图"></p>
+<h1 id="普通的GET请求"><a href="#普通的GET请求" class="headerlink" title="普通的GET请求"></a>普通的GET请求</h1><p>这是用okhttp写的一个同步请求,相信大家都很熟悉：</p>
+<pre><code>//HTTP GET
+public String get(String url) throws IOException &#123;
+    //新建OKHttpClient客户端
+    OkHttpClient client = new OkHttpClient();
+    //新建一个Request对象
+    Request request = new Request.Builder()
+            .url(url)
+            .build();
+    //Response为OKHttp中的响应
+    Response response = client.newCall(request).execute();
+    if (response.isSuccessful()) &#123;
+        return response.body().string();
+    &#125;else&#123;
+        throw new IOException(&quot;Unexpected code &quot; + response);
+    &#125;
+&#125;   
+</code></pre>
+<p>第一步创建 <code>OkHttpClient client = new OkHttpClient()</code> 对象<br>看看里面有啥</p>
+<pre><code>//初始化一些属性
+public OkHttpClient() &#123;
+    this(new Builder());
+&#125;
+
+public Builder() &#123;
+  dispatcher = new Dispatcher();
+  protocols = DEFAULT_PROTOCOLS;
+  connectionSpecs = DEFAULT_CONNECTION_SPECS;
+  eventListenerFactory = EventListener.factory(EventListener.NONE);
+  proxySelector = ProxySelector.getDefault();
+  if (proxySelector == null) &#123;
+    proxySelector = new NullProxySelector();
+  &#125;
+  cookieJar = CookieJar.NO_COOKIES;
+  socketFactory = SocketFactory.getDefault();
+  hostnameVerifier = OkHostnameVerifier.INSTANCE;
+  certificatePinner = CertificatePinner.DEFAULT;
+  proxyAuthenticator = Authenticator.NONE;
+  authenticator = Authenticator.NONE;
+  connectionPool = new ConnectionPool();
+  dns = Dns.SYSTEM;
+  followSslRedirects = true;
+  followRedirects = true;
+  retryOnConnectionFailure = true;
+  callTimeout = 0;
+  connectTimeout = 10_000;
+  readTimeout = 10_000;
+  writeTimeout = 10_000;
+  pingInterval = 0;
+&#125;
+</code></pre>
+<p>从这里可以看出来，几乎所有用到的类都在<code>OkHttpClient</code>里，你可以设置这些值达到自己需要的效果。</p>
+<p>#RealCall：真正的请求执行者。<br>而真正的调用网络的是这里<code>Response response = client.newCall(request).execute();</code></p>
+<pre><code>@Override 
+public Call newCall(Request request) &#123;
+    return RealCall.newRealCall(this, request, false /* for web socket */);
+&#125;
+
+static RealCall newRealCall(OkHttpClient client, Request originalRequest, boolean forWebSocket) &#123;
+    // Safely publish the Call instance to the EventListener.
+    RealCall call = new RealCall(client, originalRequest, forWebSocket);
+    call.eventListener = client.eventListenerFactory().create(call);
+    return call;
+&#125;
+</code></pre>
+<p>通过<code>request</code>生成一个 <code>newCall</code> 并且调用 <code>execute()</code> 方法,于是乎，咱们跳到 <code>execute()</code> 中看看它做了些什么</p>
+<pre><code>@Override 
+public Response execute() throws IOException &#123;
+    synchronized (this) &#123;
+      if (executed) throw new IllegalStateException(&quot;Already Executed&quot;);
+      executed = true;
+    &#125;
+    captureCallStackTrace();
+    timeout.enter();
+    eventListener.callStart(this);
+    try &#123;
+      client.dispatcher().executed(this);
+      Response result = getResponseWithInterceptorChain();
+      if (result == null) throw new IOException(&quot;Canceled&quot;);
+      return result;
+    &#125; catch (IOException e) &#123;
+      e = timeoutExit(e);
+      eventListener.callFailed(this, e);
+      throw e;
+    &#125; finally &#123;
+      client.dispatcher().finished(this);
+    &#125;
+&#125;
+</code></pre>
+<p>可以看到在<code>getResponseWithInterceptorChain()</code>中得到了返回的网络数据，继续进入。</p>
+<pre><code>Response getResponseWithInterceptorChain() throws IOException &#123;
+    // Build a full stack of interceptors.
+    List&lt;Interceptor&gt; interceptors = new ArrayList&lt;&gt;();
+    //配置client时设置的interceptors
+    interceptors.addAll(client.interceptors());
+    //负责失败重试以及重定向
+    interceptors.add(retryAndFollowUpInterceptor);
+    //负责把用户构造的请求转换为发送到服务器的请求、把服务器返回的响应转换为用户友好的响应
+    interceptors.add(new BridgeInterceptor(client.cookieJar()));
+    //负责读取缓存直接返回、更新缓存
+    interceptors.add(new CacheInterceptor(client.internalCache()));
+    //负责和服务器建立连接
+    interceptors.add(new ConnectInterceptor(client));
+    if (!forWebSocket) &#123;
+      //配置 OkHttpClient 时设置的
+      interceptors.addAll(client.networkInterceptors());
+    &#125;
+    //负责向服务器发送请求数据、从服务器读取响应数据的
+    interceptors.add(new CallServerInterceptor(forWebSocket));
+
+    Interceptor.Chain chain = new RealInterceptorChain(interceptors, null, null, null, 0,
+        originalRequest, this, eventListener, client.connectTimeoutMillis(),
+        client.readTimeoutMillis(), client.writeTimeoutMillis());
+    //开启链式调用
+    return chain.proceed(originalRequest);
+&#125;
+</code></pre>
+<p>最终新建<code>RealInterceptorChain</code>调用了<code>proceed()</code>方法</p>
+<p>#RealInterceptorChain#</p>
+<pre><code>//一如既往的是初始化各种对象。
+public RealInterceptorChain(List&lt;Interceptor&gt; interceptors, StreamAllocation streamAllocation,
+  HttpCodec httpCodec, RealConnection connection, int index, Request request, Call call,
+  EventListener eventListener, int connectTimeout, int readTimeout, int writeTimeout) &#123;
+    this.interceptors = interceptors;
+    this.connection = connection;
+    this.streamAllocation = streamAllocation;
+    this.httpCodec = httpCodec;
+    this.index = index;
+    this.request = request;
+    this.call = call;
+    this.eventListener = eventListener;
+    this.connectTimeout = connectTimeout;
+    this.readTimeout = readTimeout;
+    this.writeTimeout = writeTimeout;
+&#125;
+
+@Override 
+public Response proceed(Request request) throws IOException &#123;
+    return proceed(request, streamAllocation, httpCodec, connection);
+&#125;
+
+public Response proceed(Request request, StreamAllocation streamAllocation, HttpCodec httpCodec,RealConnection connection) throws IOException &#123;
+    if (index &gt;= interceptors.size()) throw new AssertionError();
+
+    calls++;
+
+    // If we already have a stream, confirm that the incoming request will use it.
+    if (this.httpCodec != null &amp;&amp; !this.connection.supportsUrl(request.url())) &#123;
+      throw new IllegalStateException(&quot;network interceptor &quot; + interceptors.get(index - 1)
+          + &quot; must retain the same host and port&quot;);
+    &#125;
+
+    // If we already have a stream, confirm that this is the only call to chain.proceed().
+    if (this.httpCodec != null &amp;&amp; calls &gt; 1) &#123;
+      throw new IllegalStateException(&quot;network interceptor &quot; + interceptors.get(index - 1)
+          + &quot; must call proceed() exactly once&quot;);
+    &#125;
+
+    // Call the next interceptor in the chain.
+    //调用下一个interceptor
+    RealInterceptorChain next = new RealInterceptorChain(interceptors, streamAllocation, httpCodec,
+        connection, index + 1, request, call, eventListener, connectTimeout, readTimeout,
+        writeTimeout);
+    Interceptor interceptor = interceptors.get(index);
+    Response response = interceptor.intercept(next);
+
+    // Confirm that the next interceptor made its required call to chain.proceed().
+    if (httpCodec != null &amp;&amp; index + 1 &lt; interceptors.size() &amp;&amp; next.calls != 1) &#123;
+      throw new IllegalStateException(&quot;network interceptor &quot; + interceptor
+          + &quot; must call proceed() exactly once&quot;);
+    &#125;
+
+    // Confirm that the intercepted response isn&#39;t null.
+    if (response == null) &#123;
+      throw new NullPointerException(&quot;interceptor &quot; + interceptor + &quot; returned null&quot;);
+    &#125;
+
+    if (response.body() == null) &#123;
+      throw new IllegalStateException(
+          &quot;interceptor &quot; + interceptor + &quot; returned a response with no body&quot;);
+    &#125;
+
+    return response;
+&#125;
+</code></pre>
+<p>关键代码在这里</p>
+<pre><code>// Call the next interceptor in the chain.
+//调用下一个链
+RealInterceptorChain next = new RealInterceptorChain(interceptors, streamAllocation, httpCodec,
+    connection, index + 1, request, call, eventListener, connectTimeout, readTimeout,
+    writeTimeout);
+Interceptor interceptor = interceptors.get(index);
+Response response = interceptor.intercept(next);
+</code></pre>
+<p>实例化下一个拦截器对应的<code>RealInterceptorChain</code>并传给当前的拦截器。</p>
+<p>调用当前拦截器的<code>intercept()</code>方法并传入<code>RealInterceptorChain</code>。</p>
+<p>#RetryAndFollowUpInterceptor</p>
+<p>除了我们自己添加的interceptor，第一个执行的是<code>retryAndFollowUpInterceptor</code>,看看它的<code>intercept</code>方法做了些什么。</p>
+<pre><code>@Override 
+public Response intercept(Chain chain) throws IOException &#123;
+    Request request = chain.request();
+    //通过入参得到 RealInterceptorChain
+    RealInterceptorChain realChain = (RealInterceptorChain) chain;
+    Call call = realChain.call();
+    EventListener eventListener = realChain.eventListener();
+
+    StreamAllocation streamAllocation = new StreamAllocation(client.connectionPool(),
+        createAddress(request.url()), call, eventListener, callStackTrace);
+    this.streamAllocation = streamAllocation;
+
+    int followUpCount = 0;
+    Response priorResponse = null;
+    while (true) &#123;
+      if (canceled) &#123;
+        streamAllocation.release();
+        throw new IOException(&quot;Canceled&quot;);
+      &#125;
+
+      Response response;
+      boolean releaseConnection = true;
+      try &#123;
+        //进行链式调用，获取返回值
+        response = realChain.proceed(request, streamAllocation, null, null);
+        releaseConnection = false;
+      &#125; catch (RouteException e) &#123;
+        // The attempt to connect via a route failed. The request will not have been sent.
+        if (!recover(e.getLastConnectException(), streamAllocation, false, request)) &#123;
+          throw e.getFirstConnectException();
+        &#125;
+        releaseConnection = false;
+        continue;
+      &#125; catch (IOException e) &#123;
+        // An attempt to communicate with a server failed. The request may have been sent.
+        boolean requestSendStarted = !(e instanceof ConnectionShutdownException);
+        if (!recover(e, streamAllocation, requestSendStarted, request)) throw e;
+        releaseConnection = false;
+        continue;
+      &#125; finally &#123;
+        // We&#39;re throwing an unchecked exception. Release any resources.
+        if (releaseConnection) &#123;
+          streamAllocation.streamFailed(null);
+          streamAllocation.release();
+        &#125;
+      &#125;
+
+      // Attach the prior response if it exists. Such responses never have a body.
+      if (priorResponse != null) &#123;
+        response = response.newBuilder()
+            .priorResponse(priorResponse.newBuilder()
+                    .body(null)
+                    .build())
+            .build();
+      &#125;
+
+      Request followUp;
+      try &#123;
+        followUp = followUpRequest(response, streamAllocation.route());
+      &#125; catch (IOException e) &#123;
+        streamAllocation.release();
+        throw e;
+      &#125;
+
+      if (followUp == null) &#123;
+        streamAllocation.release();
+        return response;
+      &#125;
+
+      closeQuietly(response.body());
+
+      if (++followUpCount &gt; MAX_FOLLOW_UPS) &#123;
+        streamAllocation.release();
+        throw new ProtocolException(&quot;Too many follow-up requests: &quot; + followUpCount);
+      &#125;
+
+      if (followUp.body() instanceof UnrepeatableRequestBody) &#123;
+        streamAllocation.release();
+        throw new HttpRetryException(&quot;Cannot retry streamed HTTP body&quot;, response.code());
+      &#125;
+
+      if (!sameConnection(response, followUp.url())) &#123;
+        streamAllocation.release();
+        streamAllocation = new StreamAllocation(client.connectionPool(),
+            createAddress(followUp.url()), call, eventListener, callStackTrace);
+        this.streamAllocation = streamAllocation;
+      &#125; else if (streamAllocation.codec() != null) &#123;
+        throw new IllegalStateException(&quot;Closing the body of &quot; + response
+            + &quot; didn&#39;t close its backing stream. Bad interceptor?&quot;);
+      &#125;
+
+      request = followUp;
+      priorResponse = response;
+    &#125;
+&#125;
+</code></pre>
+<p>官方很多功能也是通过<code>Interceptor</code>实现的,一个好的设计模式是能极大的提升代码的扩展性的。（记下来）<br>大致看了一下功能。<br>#BridgeInterceptor:将请求返回值转换为可被识别的格式<br>#CacheInterceptor:缓存相关<br>#ConnectInterceptor:服务器建立连接<br>#networkInterceptors:配置 OkHttpClient 时设置的<br>#CallServerInterceptor:和服务器交互的</p>
+<p>#异步请求的流程：</p>
+<pre><code>okHttpClient.newCall(request).enqueue(new Callback() &#123;
+        @Override
+        public void onFailure(Call call, IOException e) &#123;
+
+        &#125;
+
+        @Override
+        public void onResponse(Call call, Response response) throws IOException &#123;
+
+        &#125;
+&#125;);
+</code></pre>
+<p>与同步请求相同由<code>RealCall</code>调用<code>enqueue()</code>传入一个<code>CallBack</code></p>
+<pre><code>@Override public void enqueue(Callback responseCallback) &#123;
+    synchronized (this) &#123;
+      if (executed) throw new IllegalStateException(&quot;Already Executed&quot;);
+      executed = true;
+    &#125;
+    captureCallStackTrace();
+    eventListener.callStart(this);
+    client.dispatcher().enqueue(new AsyncCall(responseCallback));
+&#125;
+</code></pre>
+<p>可以看到咱们传入的 <code>callback</code> 被构造成 <code>AsyncCall</code> 入参到<code>enqueue</code>方法里了，咱们进入<code>enqueue</code>中看看</p>
+<pre><code>void enqueue(AsyncCall call) &#123;
+    synchronized (this) &#123;
+      //加入准备好的数组
+      readyAsyncCalls.add(call);
+    &#125;
+    promoteAndExecute();
+&#125;
+
+private boolean promoteAndExecute() &#123;
+    assert (!Thread.holdsLock(this));
+
+    List&lt;AsyncCall&gt; executableCalls = new ArrayList&lt;&gt;();
+    boolean isRunning;
+    synchronized (this) &#123;
+      for (Iterator&lt;AsyncCall&gt; i = readyAsyncCalls.iterator(); i.hasNext(); ) &#123;
+        AsyncCall asyncCall = i.next();
+
+        if (runningAsyncCalls.size() &gt;= maxRequests) break; // Max capacity.
+        if (runningCallsForHost(asyncCall) &gt;= maxRequestsPerHost) continue; // Host max capacity.
+
+        i.remove();
+        executableCalls.add(asyncCall);
+        runningAsyncCalls.add(asyncCall);
+      &#125;
+      isRunning = runningCallsCount() &gt; 0;
+    &#125;
+
+    for (int i = 0, size = executableCalls.size(); i &lt; size; i++) &#123;
+      AsyncCall asyncCall = executableCalls.get(i);
+      asyncCall.executeOn(executorService());
+    &#125;
+
+    return isRunning;
+&#125;
+</code></pre>
+<p><code>AsyncCall</code>加入到线程池执行。现在再看AsynCall的代码，它是RealCall中的内部类:</p>
+<pre><code>final class AsyncCall extends NamedRunnable &#123;
+    private final Callback responseCallback;
+
+    AsyncCall(Callback responseCallback) &#123;
+      super(&quot;OkHttp %s&quot;, redactedUrl());
+      this.responseCallback = responseCallback;
+    &#125;
+
+    String host() &#123;
+      return originalRequest.url().host();
+    &#125;
+
+    Request request() &#123;
+      return originalRequest;
+    &#125;
+
+    RealCall get() &#123;
+      return RealCall.this;
+    &#125;
+
+    /**
+     * Attempt to enqueue this async call on &#123;@code executorService&#125;. This will attempt to clean up
+     * if the executor has been shut down by reporting the call as failed.
+     */
+    void executeOn(ExecutorService executorService) &#123;
+      assert (!Thread.holdsLock(client.dispatcher()));
+      boolean success = false;
+      try &#123;
+        executorService.execute(this);
+        success = true;
+      &#125; catch (RejectedExecutionException e) &#123;
+        InterruptedIOException ioException = new InterruptedIOException(&quot;executor rejected&quot;);
+        ioException.initCause(e);
+        eventListener.callFailed(RealCall.this, ioException);
+        responseCallback.onFailure(RealCall.this, ioException);
+      &#125; finally &#123;
+        if (!success) &#123;
+          client.dispatcher().finished(this); // This call is no longer running!
+        &#125;
+      &#125;
+    &#125;
+
+    @Override protected void execute() &#123;
+      boolean signalledCallback = false;
+      timeout.enter();
+      try &#123;
+        Response response = getResponseWithInterceptorChain();
+        if (retryAndFollowUpInterceptor.isCanceled()) &#123;
+          signalledCallback = true;
+          responseCallback.onFailure(RealCall.this, new IOException(&quot;Canceled&quot;));
+        &#125; else &#123;
+          signalledCallback = true;
+          responseCallback.onResponse(RealCall.this, response);
+        &#125;
+      &#125; catch (IOException e) &#123;
+        e = timeoutExit(e);
+        if (signalledCallback) &#123;
+          // Do not signal the callback twice!
+          Platform.get().log(INFO, &quot;Callback failure for &quot; + toLoggableString(), e);
+        &#125; else &#123;
+          eventListener.callFailed(RealCall.this, e);
+          responseCallback.onFailure(RealCall.this, e);
+        &#125;
+      &#125; finally &#123;
+        client.dispatcher().finished(this);
+      &#125;
+    &#125;
+&#125;
+</code></pre>
+<p><code>AysncCall</code>中的<code>execute()</code>中的方法，同样是通过<code>Response response = getResponseWithInterceptorChain();</code>来获得<code>response</code>，这样异步任务也同样通过了<code>interceptor</code>，剩下的流程就和上面一样了。</p>
+<p>#总结<br>这就写完了，代码太多了。自己写的字好像也没几句。<br>OkHttp 通过链式调用 <code>Interceptor</code> 实现了大多数的功能，例如重定向，缓存，与服务器建立连接与交互。</p>
+<p>写着写着发现自己写的东西和看过的文章好像，没什么区别。真是头疼。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="tag"># 源码分析</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2019/06/13/%E8%87%AA%E5%BE%8B%EF%BC%8C%E5%A6%82%E4%BD%95%E4%BD%BF%E8%A1%8C%E4%B8%BA%E7%AC%A6%E5%90%88%E9%95%BF%E6%9C%9F%E5%88%A9%E7%9B%8A/" rel="prev" title="自律，如何使行为符合长期利益">
+                  <i class="fa fa-angle-left"></i> 自律，如何使行为符合长期利益
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2019/09/02/Retrofit%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="next" title="Retrofit源码分析">
+                  Retrofit源码分析 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">hujianha</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
